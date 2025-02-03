@@ -1,0 +1,49 @@
+---
+- name: Deploy SQL Server inside a Podman Pod using Quadlet (with auto-restart)
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create Quadlet file for SQL Server Podman volume
+      containers.podman.podman_volume:
+        state: quadlet
+        name: mssql_data
+        quadlet_file_mode: '0640'
+        quadlet_options:
+          - Group=192
+          - Copy=true
+          - |
+            [Install]
+            WantedBy=multi-user.target
+
+    - name: Create Quadlet file for SQL Server container
+      containers.podman.podman_container:
+        name: sql-server
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        state: quadlet
+        quadlet_file_mode: '0640'
+        env:
+          SA_PASSWORD: "JumpMan123#"
+          ACCEPT_EULA: "Y"
+          SQL_SERVER_AGENT_ENABLED: "true"
+        ports:
+          - "1433:1433"
+        quadlet_options:
+          - |
+            [Install]
+            WantedBy=multi-user.target
+          - |
+            [Service]
+            Restart=always
+            RestartSec=5
+
+    - name: Reload systemd to recognize Quadlet services
+      command: systemctl daemon-reload
+
+    - name: Start SQL Server volume service
+      command: systemctl start mssql_data-volume.service
+      ignore_errors: true
+
+    - name: Start SQL Server container service
+      command: systemctl start sql-server.service
+      ignore_errors: true

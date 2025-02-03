@@ -1,0 +1,25 @@
+---
+- name: Install and Configure Cockpit
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install Cockpit
+      dnf:
+        name: cockpit
+        state: present
+        update_cache: true
+
+    - name: Enable and start Cockpit service
+      systemd:
+        name: cockpit.socket
+        enabled: true
+        state: started
+
+    - name: Open firewall for Cockpit (temporary)
+      command: firewall-cmd --add-service=cockpit
+      ignore_errors: true
+
+    - name: Open firewall for Cockpit (permanent)
+      command: firewall-cmd --add-service=cockpit --permanent
+      ignore_errors: true

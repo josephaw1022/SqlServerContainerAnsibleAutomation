@@ -1,0 +1,63 @@
+---
+- name: Destroy Podman Container and Volume Services
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Stop the Podman container service
+      command: systemctl stop sql-server.service
+      ignore_errors: true
+
+    - name: Disable the Podman container service
+      command: systemctl disable sql-server.service
+      ignore_errors: true
+
+    - name: Stop the Podman volume service
+      command: systemctl stop mssql_data-volume.service
+      ignore_errors: true
+
+    - name: Disable the Podman volume service
+      command: systemctl disable mssql_data-volume.service
+      ignore_errors: true
+
+    - name: Delete the Podman container service file (persistent)
+      file:
+        path: /etc/systemd/system/sql-server.service
+        state: absent
+        force: true
+
+    - name: Delete the Podman volume service file (persistent)
+      file:
+        path: /etc/systemd/system/mssql_data-volume.service
+        state: absent
+        force: true
+
+    - name: Delete generated systemd service files from `/run/systemd/generator/`
+      file:
+        path: "/run/systemd/generator/{{ item }}"
+        state: absent
+      loop:
+        - sql-server.service
+        - mssql_data-volume.service
+      ignore_errors: true
+
+    - name: Delete the Quadlet definition files from `/etc/containers/systemd/`
+      file:
+        path: "/etc/containers/systemd/{{ item }}"
+        state: absent
+      loop:
+        - sql-server.container
+        - mssql_data.volume
+      ignore_errors: true
+
+    - name: Reload systemd to clear deleted services
+      command: systemctl daemon-reload
+
+    - name: Verify that services are no longer enabled or running
+      shell: systemctl list-unit-files | grep -E 'sql-server|mssql_data-volume' || true
+      register: service_check
+      changed_when: false
+
+    - name: Debug remaining services (if any)
+      debug:
+        msg: "{{ service_check.stdout_lines if service_check.stdout_lines else 'All services removed successfully.' }}"

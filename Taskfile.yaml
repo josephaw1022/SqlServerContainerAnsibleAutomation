@@ -1,0 +1,50 @@
+version: "3"
+
+tasks:
+  default:
+    desc: "List all tasks"
+    cmds:
+      - task --list-all
+
+  podman-install:
+    desc: "Runs the Podman installation playbook"
+    cmds:
+      - ansible-playbook -i inventory.ini playbooks/installs-podman.yaml -e "@vars/podman-packages.yaml"
+    aliases:
+      - install-podman
+      - install
+      - podman
+
+  container-deploy:
+    desc: "Deploys and runs a Podman container and volume"
+    cmds:
+      - ansible-playbook -i inventory.ini playbooks/container-deploy.yaml -e "@vars/compose-paths.yaml"
+    aliases:
+      - deploy
+      - podman
+
+  container-destroy:
+    desc: "Stops and removes the Podman container and volume"
+    cmds:
+      - ansible-playbook -i inventory.ini playbooks/container-destroy.yaml -e "@vars/compose-paths.yaml"
+    aliases:
+      - teardown
+      - podman-compose-teardown
+
+  cockpit-install:
+    desc: "Installs and configures Cockpit"
+    cmds:
+      - ansible-playbook -i inventory.ini playbooks/install-cockpit.yaml
+    aliases:
+      - cockpit-install
+      - cockpit
+
+  podman-uninstall:
+    desc: "Uninstalls Podman, Podman Docker, Cockpit, and Podman Compose"
+    cmds:
+      - ansible-playbook -i inventory.ini playbooks/uninstall-packages.yaml -e "@vars/uninstall-packages.yaml"
+    aliases:
+      - uninstall
+      - remove
+      - podman-uninstall
+      - clean

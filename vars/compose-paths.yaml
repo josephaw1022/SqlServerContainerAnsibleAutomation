@@ -1,0 +1,4 @@
+---
+local_compose_file: "../assets/compose.yaml"
+remote_compose_dir: "/root/podman-compose-deployment"
+remote_compose_file: "{{ remote_compose_dir }}/compose.yaml"

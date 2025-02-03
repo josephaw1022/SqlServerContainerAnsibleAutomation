@@ -1,0 +1,17 @@
+---
+- name: Uninstall specified pip and dnf packages
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Uninstall DNF packages
+      dnf:
+        name: "{{ dnf_packages }}"
+        state: absent
+
+    - name: Uninstall Pip packages
+      pip:
+        name: "{{ pip_packages }}"
+        state: absent
+        executable: pip3
+      ignore_errors: true 

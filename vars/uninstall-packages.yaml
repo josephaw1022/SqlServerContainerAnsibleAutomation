@@ -1,0 +1,8 @@
+---
+dnf_packages:
+  - podman
+  - podman-docker
+  - runc
+
+pip_packages:
+  - podman-compose
