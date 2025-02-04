@@ -15,21 +15,22 @@ tasks:
       - install
       - podman
 
-  container-deploy:
-    desc: "Deploys and runs a Podman container and volume"
+  podman-deploy:
+    desc: "Deploys and runs Podman containers and volumes"
     cmds:
-      - ansible-playbook -i inventory.ini playbooks/container-deploy.yaml -e "@vars/compose-paths.yaml"
+      - ansible-playbook -i inventory.ini playbooks/container-deploy.yaml -e "@vars/podman-resources.yaml"
     aliases:
       - deploy
       - podman
 
-  container-destroy:
-    desc: "Stops and removes the Podman container and volume"
+  podman-destroy:
+    desc: "Stops and removes Podman containers and volumes"
     cmds:
-      - ansible-playbook -i inventory.ini playbooks/container-destroy.yaml -e "@vars/compose-paths.yaml"
+      - ansible-playbook -i inventory.ini playbooks/container-destroy.yaml -e "@vars/podman-resources.yaml"
     aliases:
       - teardown
       - podman-compose-teardown
+
 
   cockpit-install:
     desc: "Installs and configures Cockpit"

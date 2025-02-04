@@ -1,0 +1,64 @@
+---
+podman_volumes:
+  - name: mssql_data
+    filename: sql-server-volume
+    options:
+      - Group=192
+      - Copy=true
+      - |
+        [Install]
+        WantedBy=multi-user.target
+
+  - name: postgres_data
+    filename: postgres-volume
+    options:
+      - Group=192
+      - Copy=true
+      - |
+        [Install]
+        WantedBy=multi-user.target
+
+podman_containers:
+  - name: sql-server
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    filename: sql-server
+    env:
+      SA_PASSWORD: "MadZebra123#"
+      ACCEPT_EULA: "Y"
+      SQL_SERVER_AGENT_ENABLED: "true"
+    ports:
+      - "1433:1433"
+    volumes:
+      - "mssql_data:/var/opt/mssql"
+    options:
+      - "AutoUpdate=registry"
+      - "Pull=newer"
+      - |
+        [Install]
+        WantedBy=multi-user.target
+      - |
+        [Service]
+        Restart=always
+        RestartSec=5
+
+  - name: postgres
+    image: docker.io/postgres:16
+    filename: postgres
+    env:
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "securepassword"
+      POSTGRES_DB: "appdb"
+    ports:
+      - "5432:5432"
+    volumes:
+      - "postgres_data:/var/lib/postgresql/data"
+    options:
+      - "AutoUpdate=registry"
+      - "Pull=newer"
+      - |
+        [Install]
+        WantedBy=multi-user.target
+      - |
+        [Service]
+        Restart=always
+        RestartSec=5

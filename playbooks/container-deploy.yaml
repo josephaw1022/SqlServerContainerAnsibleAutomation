@@ -1,49 +1,48 @@
 ---
-- name: Deploy SQL Server inside a Podman Pod using Quadlet (with auto-restart)
+- name: Deploy Podman Resources (Volumes & Containers) with Quadlet
   hosts: all
   become: true
 
   tasks:
-    - name: Create Quadlet file for SQL Server Podman volume
+    - name: Create Quadlet files for volumes
       containers.podman.podman_volume:
         state: quadlet
-        name: mssql_data
+        name: "{{ item.name }}"
         quadlet_file_mode: '0640'
-        quadlet_options:
-          - Group=192
-          - Copy=true
-          - |
-            [Install]
-            WantedBy=multi-user.target
+        quadlet_options: "{{ item.options | default([]) }}"
+      loop: "{{ podman_volumes }}"
+      loop_control:
+        label: "{{ item.name }}"
 
-    - name: Create Quadlet file for SQL Server container
+    # - name: Start Podman volume services
+    #   command: systemctl start "{{ item.name }}-volume.service"
+    #   ignore_errors: true
+    #   loop: "{{ podman_volumes }}"
+
+    # - name: Reload systemd to recognize Quadlet services
+    #   command: systemctl daemon-reload
+
+    - name: Create Quadlet files for containers
       containers.podman.podman_container:
-        name: sql-server
-        image: mcr.microsoft.com/mssql/server:2022-latest
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
         state: quadlet
         quadlet_file_mode: '0640'
-        env:
-          SA_PASSWORD: "JumpMan123#"
-          ACCEPT_EULA: "Y"
-          SQL_SERVER_AGENT_ENABLED: "true"
-        ports:
-          - "1433:1433"
-        quadlet_options:
-          - |
-            [Install]
-            WantedBy=multi-user.target
-          - |
-            [Service]
-            Restart=always
-            RestartSec=5
+        env: "{{ item.env | default({}) }}"
+        ports: "{{ item.ports | default([]) }}"
+        volumes: "{{ item.volumes | default([]) }}"
+        quadlet_options: "{{ item.options | default([]) }}"
+      loop: "{{ podman_containers }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+
+
+
+    - name: Start Podman container services
+      command: systemctl start "{{ item.name }}.service"
+      ignore_errors: true
+      loop: "{{ podman_containers }}"
 
     - name: Reload systemd to recognize Quadlet services
       command: systemctl daemon-reload
-
-    - name: Start SQL Server volume service
-      command: systemctl start mssql_data-volume.service
-      ignore_errors: true
-
-    - name: Start SQL Server container service
-      command: systemctl start sql-server.service
-      ignore_errors: true

@@ -1,63 +1,77 @@
 ---
-- name: Destroy Podman Container and Volume Services
+- name: Destroy Podman Resources (Volumes & Containers)
   hosts: all
   become: true
 
   tasks:
-    - name: Stop the Podman container service
-      command: systemctl stop sql-server.service
+    - name: Stop and disable container services
+      command: systemctl stop "{{ item.name }}.service"
       ignore_errors: true
+      loop: "{{ podman_containers }}"
 
-    - name: Disable the Podman container service
-      command: systemctl disable sql-server.service
+    - name: Disable container services
+      command: systemctl disable "{{ item.name }}.service"
       ignore_errors: true
+      loop: "{{ podman_containers }}"
 
-    - name: Stop the Podman volume service
-      command: systemctl stop mssql_data-volume.service
+    - name: Stop and disable volume services
+      command: systemctl stop "{{ item.name }}-volume.service"
       ignore_errors: true
+      loop: "{{ podman_volumes }}"
 
-    - name: Disable the Podman volume service
-      command: systemctl disable mssql_data-volume.service
+    - name: Disable volume services
+      command: systemctl disable "{{ item.name }}-volume.service"
       ignore_errors: true
+      loop: "{{ podman_volumes }}"
 
-    - name: Delete the Podman container service file (persistent)
+    - name: Delete Quadlet container definition files
       file:
-        path: /etc/systemd/system/sql-server.service
+        path: "/etc/containers/systemd/{{ item.filename | default(item.name) }}.container"
         state: absent
-        force: true
+      loop: "{{ podman_containers }}"
+      loop_control:
+        label: "{{ item.name }}"
 
-    - name: Delete the Podman volume service file (persistent)
+    - name: Delete Quadlet volume definition files
       file:
-        path: /etc/systemd/system/mssql_data-volume.service
+        path: "/etc/containers/systemd/{{ item.filename | default(item.name) }}.volume"
         state: absent
-        force: true
+      loop: "{{ podman_volumes }}"
+      loop_control:
+        label: "{{ item.name }}"
 
-    - name: Delete generated systemd service files from `/run/systemd/generator/`
+    - name: Remove generated systemd service files for containers
       file:
-        path: "/run/systemd/generator/{{ item }}"
+        path: "/run/systemd/generator/{{ item.name }}.service"
         state: absent
-      loop:
-        - sql-server.service
-        - mssql_data-volume.service
+      loop: "{{ podman_containers }}"
       ignore_errors: true
 
-    - name: Delete the Quadlet definition files from `/etc/containers/systemd/`
+    - name: Remove generated systemd service files for volumes
       file:
-        path: "/etc/containers/systemd/{{ item }}"
+        path: "/run/systemd/generator/{{ item.filename }}-volume.service"
         state: absent
-      loop:
-        - sql-server.container
-        - mssql_data.volume
+      loop: "{{ podman_volumes }}"
+      ignore_errors: true
+
+    - name: Delete Podman volumes
+      command: podman volume rm "{{ item.filename }}"
+      ignore_errors: true
+      loop: "{{ podman_volumes }}"
+
+    - name: Ensure all volume-related systemd files are deleted
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - "/etc/containers/systemd/{{ podman_volumes | map(attribute='filename') | join('.volume,') }}.volume"
+        - "/run/systemd/generator/{{ podman_volumes | map(attribute='filename') | join('-volume.service,') }}-volume.service"
+      ignore_errors: true
+
+    - name: delete volumes manually
+      command: rm -rf /var/lib/containers/storage/volumes/{{ item.name }}
+      loop: "{{ podman_volumes }}"
       ignore_errors: true
 
     - name: Reload systemd to clear deleted services
       command: systemctl daemon-reload
-
-    - name: Verify that services are no longer enabled or running
-      shell: systemctl list-unit-files | grep -E 'sql-server|mssql_data-volume' || true
-      register: service_check
-      changed_when: false
-
-    - name: Debug remaining services (if any)
-      debug:
-        msg: "{{ service_check.stdout_lines if service_check.stdout_lines else 'All services removed successfully.' }}"
